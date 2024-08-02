@@ -1,0 +1,322 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { socket } from "../../socket";
+import moment from "moment";
+import axios from "axios";
+import Link from "next/link";
+import { getRoomMessages } from "@/Actions/getMessage";
+
+type Message = {
+  message: string;
+  sender: string;
+  room: string;
+  time: string;
+};
+
+export interface userI {
+  firstName: any;
+  middleName: string;
+  lastName: string;
+  flatnumber: string;
+  Area: string;
+  State: string;
+  City: string;
+  PinCode: number;
+  photo: string;
+  Id: string;
+  email: string;
+  password: string;
+  initiationDate: string;
+  _id: string;
+}
+
+function page() {
+  const userLog = localStorage.getItem("user");
+  const json = JSON.parse(userLog || "{}");
+
+  const [originalUsers, setOriginalUsers] = useState<userI[]>([]);
+  const [users, setUsers] = useState<userI[]>([]);
+  const [searchtext, setsearchText] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [curRoom, setCurRoom] = useState<string>("groupChat");
+  const [chatName, setChatName] = useState("");
+  const [roomMessages, setRoomMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (searchtext === "") {
+      setOriginalUsers(users);
+    } else {
+      const filteredUsers = users.filter((usr) =>
+        usr.firstName.toLowerCase().includes(searchtext.toLowerCase())
+      );
+      setOriginalUsers(filteredUsers);
+    }
+  }, [searchtext, users]);
+
+  useEffect(() => {
+    async function getuserlist() {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/alluserlist`
+      );
+      setUsers(response.data);
+      setOriginalUsers(response.data);
+    }
+    getuserlist();
+  }, []);
+
+  useEffect(() => {
+    socket.on("receive-msg", (data) => {
+      console.log("Receiving messages ....");
+      setRoomMessages((prev) => [...prev, data]);
+    });
+
+    return () => {
+      socket.off("receive-msg");
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("getting Room Messages... ")
+    async function getMessages() {
+      const response: any = await getRoomMessages(curRoom);
+      const chats = JSON.parse(response).chats;
+      setRoomMessages(chats);
+    }
+
+    getMessages();
+  }, [curRoom]);
+
+  const sendMessage = () => {
+    if (curRoom === "groupChat") {
+      socket.emit("group-message", {
+        room: curRoom,
+        message: message,
+        sender: json.firstName,
+        time: moment(new Date().getTime()).format("h:mm a"),
+      });
+    } else {
+      socket.emit("private-message", {
+        room: curRoom,
+        message: message,
+        sender: json.firstName,
+        time: moment(new Date().getTime()).format("h:mm a"),
+      });
+    }
+    setMessage("");
+  };
+
+
+
+  const joinRoom = (name: string) => {
+    setChatName(name);
+    const room = (name.toLowerCase() + json?.firstName.toLowerCase())
+      .split("")
+      .sort()
+      .join("");
+    setCurRoom(room);
+    socket.emit("join-room", { room, name });
+  };
+
+  return (
+    <div className="h-screen w-full flex antialiased text-gray-200 bg-gray-900 overflow-hidden">
+      <div className="flex-1 flex flex-col">
+        <main className="flex-grow flex flex-row min-h-0">
+          <section className="flex flex-col flex-none overflow-auto w-24 group lg:max-w-sm md:w-2/5 transition-all duration-300 ease-in-out">
+            <div className="header p-4 flex flex-row justify-between items-center flex-none">
+              <Link
+                className="text-md font-bold hidden md:block group-hover:block"
+                href={"/admin/userlist"}
+              >
+                Back
+              </Link>
+            </div>
+            <div className="search-box p-4 flex-none">
+              <form>
+                <div className="relative">
+                  <label>
+                    <input
+                      className="rounded-full py-2 pr-6 pl-10 w-full border border-gray-800 focus:border-gray-700 bg-gray-800 focus:bg-gray-900 focus:outline-none text-gray-200 focus:shadow-md transition duration-300 ease-in"
+                      type="text"
+                      value={searchtext}
+                      onChange={(e) => setsearchText(e.target.value)}
+                      placeholder="Search"
+                    />
+                    <span className="absolute top-0 left-0 mt-2 ml-3 inline-block">
+                      <svg viewBox="0 0 24 24" className="w-6 h-6">
+                        <path
+                          fill="#bbb"
+                          d="M16.32 14.9l5.39 5.4a1 1 0 0 1-1.42 1.4l-5.38-5.38a8 8 0 1 1 1.41-1.41zM10 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"
+                        />
+                      </svg>
+                    </span>
+                  </label>
+                </div>
+              </form>
+            </div>
+
+            <div className="contacts p-2 flex-1 overflow-y-scroll scroll-width:NONE example">
+              <div
+                className={`flex justify-between items-center p-3 hover:bg-gray-800 ${
+                  curRoom ? "" : "bg-gray-800"
+                } rounded-lg relative`}
+                onClick={() => {
+                  setChatName(""), setCurRoom("groupChat");
+                }}
+              >
+                <div className="w-16 h-16 relative flex flex-shrink-0">
+                  <img
+                    className="shadow-md rounded-full w-full h-full object-cover"
+                    src="../../../public/spiritualCenter.jpeg"
+                    alt="group"
+                  />
+                </div>
+                <div
+                  className="flex-auto min-w-0 ml-4 mr-6 hidden md:block group-hover:block"
+                  onClick={() => joinRoom("groupChat")}
+                >
+                  <p>Group Chat</p>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="min-w-0">
+                      <p className="truncate">
+                        Ok, see you at the subway in a bit.
+                      </p>
+                    </div>
+                    <p className="ml-2 whitespace-no-wrap">Just now</p>
+                  </div>
+                </div>
+              </div>
+              {json?.Id !== "admin" && (
+                <div
+                  className={`flex justify-between items-center p-3 hover:bg-gray-800 ${
+                    chatName === "admin" ? "bg-gray-800" : ""
+                  } rounded-lg relative`}
+                  onClick={() => joinRoom("admin")}
+                >
+                  <div className="w-16 h-16 relative flex flex-shrink-0">
+                    <img
+                      className="shadow-md rounded-full w-full h-full object-cover"
+                      src="../../../public/admin.jpeg"
+                      alt="admin"
+                    />
+                  </div>
+                  <div className="flex-auto min-w-0 ml-4 mr-6 hidden md:block group-hover:block">
+                    <p>Admin</p>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <div className="min-w-0">
+                        <p className="truncate">
+                          Ok, see you at the subway in a bit.
+                        </p>
+                      </div>
+                      <p className="ml-2 whitespace-no-wrap">Just now</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {originalUsers.map(
+                (user: userI, index) =>
+                  user.firstName !== json?.firstName && (
+                    <div
+                      className={`flex justify-between items-center p-3 hover:bg-gray-800 ${
+                        chatName === user.firstName ? "bg-gray-800" : ""
+                      } rounded-lg relative`}
+                      onClick={() => joinRoom(user.firstName)}
+                      key={index}
+                    >
+                      <div className="w-16 h-16 relative flex flex-shrink-0">
+                        <img
+                          className="shadow-md rounded-full w-full h-full object-cover"
+                          src={`${process.env.NEXT_PUBLIC_S3_IMAGE_URL}${user.photo}`}
+                          alt="userImage"
+                        />
+                      </div>
+                      <div className="flex-auto min-w-0 ml-4 mr-6 hidden md:block group-hover:block">
+                        <p>{user.firstName}</p>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <div className="min-w-0">
+                            <p className="truncate">
+                              Ok, see you at the subway in a bit.
+                            </p>
+                          </div>
+                          <p className="ml-2 whitespace-no-wrap">Just now</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+              )}
+            </div>
+          </section>
+          <section className="flex flex-col flex-auto border-l border-gray-800">
+            <div className="chat-header px-6 py-4 flex flex-row flex-none justify-between items-center shadow">
+              <div className="flex">
+                <div className="w-12 h-12 mr-4 relative flex flex-shrink-0">
+                  <img
+                    className="shadow-md rounded-full w-full h-full object-cover"
+                    src={chatName ? "" : "../../../public/spiritualCenter.jpeg"}
+                    alt="image"
+                  />
+                </div>
+                <div className="text-sm">
+                  <p className="font-bold">
+                    {chatName ? chatName : "Group Chat"}
+                  </p>
+                  <p>{chatName ? "Active 1h ago" : ""}</p>
+                </div>
+              </div>
+            </div>
+            <div className="chat-body p-4 flex-1 overflow-y-scroll example">
+              {roomMessages.map((msg, i) => (
+                <div
+                  className={
+                    msg.sender === json?.firstName
+                      ? "flex flex-row justify-end my-3"
+                      : "flex flex-row justify-start my-3 "
+                  }
+                  key={i}
+                >
+                  <div className="messages text-sm grid grid-flow-row gap-2">
+                    <div>{msg.sender}</div>
+                    <div className="flex items-center">
+                      <span className="px-4 py-2 rounded-lg inline-block rounded-bl-none bg-gray-700">
+                        {msg.message}
+                        <span className="text-xs text-gray-500 ml-2">
+                          {msg.time}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="chat-footer flex-none">
+              <div className="flex flex-row items-center p-4">
+                <div className="relative flex-grow">
+                  <input
+                    title="input message"
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="rounded-full py-2 pl-4 pr-8 w-full border border-gray-800 focus:border-gray-700 bg-gray-800 focus:bg-gray-900 focus:outline-none text-gray-200 focus:shadow-md transition duration-300 ease-in"
+                  />
+                  <button
+                    title="send"
+                    type="button"
+                    onClick={sendMessage}
+                    className="absolute right-0 top-0 mt-2 mr-2 focus:outline-none"
+                  >
+                    Send
+                    <i
+                      className="fa fa-paper-plane h-6 w-6 text-gray-200"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default page;
