@@ -70,8 +70,24 @@ function page() {
       setRoomMessages((prev) => [...prev, data]);
     });
 
+    // socket.on("update-user-status", ({ userId, status }) => {
+    //   setUsers((prevUsers) =>
+    //     prevUsers.map((user) =>
+    //       user._id === userId ? { ...user, online: status } : user
+    //     )
+    //   );
+    // });
+
+    // socket.on("user-typing", ({ user }) => {
+    //   setTypingUsers((prev) => [...new Set([...prev, user])]);
+    // });
+  
+    // socket.on("user-stop-typing", ({ user }) => {
+    //   setTypingUsers((prev) => prev.filter((u) => u !== user));
+    // });
     return () => {
       socket.off("receive-msg");
+      // socket.off("update-user-status");
     };
   }, []);
 
@@ -115,7 +131,33 @@ function page() {
       .join("");
     setCurRoom(room);
     socket.emit("join-room", { room, name });
+    // socket.emit("join-room", { room, name, userId: json._id });
   };
+
+  // const handleTyping = () => {
+  //   if (!isTyping) {
+  //     socket.emit("typing", { room: curRoom, user: json.firstName });
+  //     setIsTyping(true);
+  //   }
+  //   if (typingTimeout) clearTimeout(typingTimeout);
+  //   typingTimeout = setTimeout(stopTyping, 3000); // Stop typing after 3 seconds of inactivity
+  // };
+  
+  // const stopTyping = () => {
+  //   socket.emit("stop-typing", { room: curRoom, user: json.firstName });
+  //   setIsTyping(false);
+  // };
+  
+  const TypingIndicator = ({ typingUsers }:{typingUsers : any}) => (
+    <div className="typing-indicator">
+      {typingUsers.length > 0 && (
+        <p>
+          {typingUsers.join(", ")} {typingUsers.length > 1 ? "are" : "is"} typing...
+        </p>
+      )}
+    </div>
+  );
+  
 
   return (
     <div className="h-screen w-full flex antialiased text-gray-200 bg-gray-900 overflow-hidden">
@@ -287,6 +329,7 @@ function page() {
                 </div>
               ))}
             </div>
+            {/* <TypingIndicator typingUsers={typingUsers} /> */}
             <div className="chat-footer flex-none">
               <div className="flex flex-row items-center p-4">
                 <div className="relative flex-grow">
@@ -295,6 +338,8 @@ function page() {
                     type="text"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                  //   onKeyPress={handleTyping}
+                  // onBlur={stopTyping}
                     className="rounded-full py-2 pl-4 pr-8 w-full border border-gray-800 focus:border-gray-700 bg-gray-800 focus:bg-gray-900 focus:outline-none text-gray-200 focus:shadow-md transition duration-300 ease-in"
                   />
                   <button

@@ -36,6 +36,21 @@ export const joinRoom = async (room) => {
   }
 };
 
+// async function updateUserStatus(userId, status) {
+//   try {
+//     await userModel.updateOne({ _id: userId }, { online: status });
+//     io.emit("update-user-status", { userId, status });
+//   } catch (error) {
+//     console.error(error.message);
+//   }
+// }
+// const userSchema = new Schema({
+//   firstName: { type: String, required: true },
+//   // Other fields...
+//   online: { type: Boolean, default: false },
+// });
+
+// export const userModel = mongoose.models.user || model("user", userSchema);
 app.prepare().then(() => {
   const httpServer = createServer(handler);
 
@@ -60,9 +75,23 @@ app.prepare().then(() => {
       joinRoom(room);
     });
 
-    socket.on("disconnect", () => {
-      console.log("user disconnected");
-    });
+    // socket.on("disconnect", () => {
+    //   console.log("user disconnected");
+    // const userId = Object.keys(users).find(key => users[key] === socket.id);
+    // if (userId) {
+    //   delete users[userId];
+    //   updateUserStatus(userId, false);
+    // }
+    // });
+
+    // socket.on("typing", ({ room, user }) => {
+    //   socket.to(room).emit("user-typing", { user });
+    // });
+  
+    // socket.on("stop-typing", ({ room, user }) => {
+    //   socket.to(room).emit("user-stop-typing", { user });
+    // });
+
   });
 
   httpServer

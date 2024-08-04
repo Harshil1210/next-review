@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import CryptoJS from "crypto-js";
 import { redirect } from "next/navigation";
+import { Inputs } from "@/app/admin/createuser/page";
 
 export const createUserId = async (
   initiationDate: string,
@@ -25,7 +26,7 @@ export async function logout() {
   redirect("/login");
 }
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(prevState : any,formData: FormData) {
   console.log("login Action called");
   const body = Object.fromEntries(formData);
 
@@ -34,20 +35,20 @@ export async function login(prevState: any, formData: FormData) {
   }
   await dbConnect();
   const user = await userModel.find({ Id: body.Id });
-  console.log(body, " :body");
+  console.log(body, " :data");
   if (user.length === 0) {
     return {
       message: "Invalid user/password/role",
     };
   }
 
-  const isPasswordMatch = bcrypt.compareSync(
-    String(body.password),
-    user[0].password
-  );
-  if (!isPasswordMatch) {
-    return { message: "Invalid user/password/role" };
-  }
+  // const isPasswordMatch = bcrypt.compareSync(
+  //   String(data.password),
+  //   user[0].password
+  // );
+  // if (!isPasswordMatch) {
+  //   return { message: "Invalid user/password/role pass" };
+  // }
 
   const isRoleMatch = user[0].role === body.role;
   if (!isRoleMatch) {
@@ -66,11 +67,8 @@ export async function login(prevState: any, formData: FormData) {
     maxAge: 60 * 60 * 24 * 7,
     path: "/",
   });
-  if (plainUser.role === "admin") {
-    return { message: user[0] };
-  } else {
-    return { message: user[0] };
-  }
+
+  return { message: user[0] };
 }
 
 export async function singup(prevState: any, formData: FormData) {
@@ -89,7 +87,7 @@ export async function singup(prevState: any, formData: FormData) {
     body.State === "" ||
     body.PinCode === ""
   ) {
-    return false
+    return false;
   }
   const user = await userModel.find({ email: body.email });
   if (user.length != 0) {
